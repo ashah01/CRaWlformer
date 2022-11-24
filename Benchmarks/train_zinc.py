@@ -104,8 +104,8 @@ def load_split_data(config):
     train_data = ZINC(DATA_PATH, subset=True, split='train', transform=feat_transform, pre_transform=preproc)
     val_data = ZINC(DATA_PATH, subset=True, split='val', transform=feat_transform, pre_transform=preproc)
 
-    train_iter = CRaWlLoader(train_data, shuffle=True, batch_size=config['batch_size'], num_workers=4)
-    val_iter = CRaWlLoader(val_data, batch_size=100, num_workers=4)
+    train_iter = CRaWlLoader(train_data, shuffle=True, batch_size=config['batch_size'])
+    val_iter = CRaWlLoader(val_data, batch_size=100)
     return train_iter, val_iter
 
 
