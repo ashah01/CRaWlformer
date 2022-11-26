@@ -16,7 +16,7 @@ DATA_NAME = 'MUTAG'
 DATA_PATH = f'data/{DATA_NAME}/'
 PCKL_PATH = f'data/{DATA_NAME}/data.pckl'
 
-num_node_feat, num_edge_feat, num_classes = 7, 4, 2 
+num_node_feat, num_edge_feat, num_classes = 7, 4, 1 
 
 
 def eval_regression(model, iter, repeats=1):
