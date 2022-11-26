@@ -125,6 +125,5 @@ if __name__ == '__main__':
 
     train_iter, val_iter = load_split_data(config)
     model = CRaWl(model_dir, config, num_node_feat, num_edge_feat, num_classes, BCEWithLogitsLoss())
-    import IPython; IPython.embed()
     model.save()
     train_regression(model, train_iter, val_iter)

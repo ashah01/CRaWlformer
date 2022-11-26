@@ -1,6 +1,6 @@
 import os
 import torch
-from torch.nn import Module, Linear, Dropout, BatchNorm1d, ReLU, Sequential, Identity, Conv1d, MultiheadAttention
+from torch.nn import Module, Linear, Dropout, BatchNorm1d, ReLU, Sequential, Identity, Conv1d, TransformerEncoderLayer
 from torch_scatter import scatter_mean, scatter_sum
 from torch_geometric.utils import to_dense_batch
 from torch_geometric.nn.glob.glob import global_add_pool
@@ -148,17 +148,9 @@ class CRaWl(Module):
             if self.vn and i < self.layers - 1:
                 modules.append(VNUpdate(self.hidden, config))
         self.convs = Sequential(*modules)
-        self.dropout_attn = Dropout(self.dropout)
         self.dropout_layer = Dropout(self.dropout)
         self.batch_local = BatchNorm1d(self.hidden)
-        self.batch_attn = BatchNorm1d(self.hidden)
-        self.transformer = MultiheadAttention(self.hidden, 5, dropout=0.5) # 147 % 7 == 0
-        self.ff_linear1 = Linear(self.hidden, self.hidden * 2)
-        self.activation = ReLU()
-        self.ff_linear2 = Linear(self.hidden * 2, self.hidden)
-        self.ff_dropout1 = Dropout(self.dropout)
-        self.ff_dropout2 = Dropout(self.dropout)
-        self.norm2 = BatchNorm1d(self.hidden)
+        self.transformer = TransformerEncoderLayer(self.hidden, nhead=5, dim_feedforward=self.hidden*2, dropout=0.5) # 147 % 7 == 0
         self.FC_layers = torch.nn.ModuleList([Linear(self.hidden, self.hidden // 2), Linear(self.hidden // 2, self.hidden // 4), Linear(self.hidden // 4, 1)])
         self.out_activation = ReLU()
 
@@ -203,13 +195,7 @@ class CRaWl(Module):
         h_local = self.batch_local(h_local)
         h_dense, mask = to_dense_batch(h_local, data.batch)
         h_dense = h_dense.transpose(0, 1)
-        h_attn = self.transformer(h_dense, h_dense, h_dense, attn_mask=None, key_padding_mask=~mask, need_weights=False)[0].transpose(0, 1)[mask]
-        h_attn = self.dropout_attn(h_attn)
-        h_attn = self.batch_attn(h_attn)
-        
-        # Linear layers
-        h = self.ff_dropout2(self.ff_linear2(self.ff_dropout1(self.activation(self.ff_linear1(h_attn)))))
-        h = self.norm2(h)
+        h = self.transformer(h_dense, src_mask=None, src_key_padding_mask=~mask).transpose(0, 1)[mask]
         graph_emb = global_add_pool(h, data.batch)
         for l in range(2):
             graph_emb = self.FC_layers[l](graph_emb)
