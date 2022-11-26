@@ -152,7 +152,7 @@ class CRaWl(Module):
         self.dropout_layer = Dropout(self.dropout)
         self.batch_local = BatchNorm1d(self.hidden)
         self.batch_attn = BatchNorm1d(self.hidden)
-        self.transformer = MultiheadAttention(self.hidden, 7, dropout=0.5) # 147 % 7 == 0
+        self.transformer = MultiheadAttention(self.hidden, 5, dropout=0.5) # 147 % 7 == 0
         self.ff_linear1 = Linear(self.hidden, self.hidden * 2)
         self.activation = ReLU()
         self.ff_linear2 = Linear(self.hidden * 2, self.hidden)
