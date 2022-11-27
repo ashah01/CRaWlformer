@@ -2,9 +2,9 @@ import sys
 sys.path.append('.')
 import torch
 import numpy as np
-from torch_geometric.datasets import TUDataset 
+from torch_geometric.datasets import ZINC
 import torch.nn.functional as F
-from torch.nn import BCEWithLogitsLoss 
+from torch.nn import L1Loss
 from torch.utils.tensorboard import SummaryWriter
 import json
 import argparse
@@ -12,17 +12,17 @@ from data_utils import preproc, CRaWlLoader
 from models import CRaWl
 
 
-DATA_NAME = 'MUTAG'
+DATA_NAME = 'ZINC'
 DATA_PATH = f'data/{DATA_NAME}/'
 PCKL_PATH = f'data/{DATA_NAME}/data.pckl'
 
-num_node_feat, num_edge_feat, num_classes = 7, 4, 1 
+num_node_feat, num_edge_feat, num_classes = 21, 4, 1
 
 
 def eval_regression(model, iter, repeats=1):
     model.eval()
     mae_list = []
-    loss_fn = BCEWithLogitsLoss(reduction='sum')
+
     for _ in range(repeats):
         total_err = 0
         total_samples = 0
@@ -30,7 +30,7 @@ def eval_regression(model, iter, repeats=1):
             data.to(device)
             data = model(data)
 
-            err = loss_fn(data.y_pred, data.y)
+            err = torch.abs(data.y_pred - data.y).sum()
             total_err += err.cpu().detach().numpy()
             total_samples += data.y.shape[0]
 
@@ -46,7 +46,7 @@ def train_regression(model, train_iter, val_iter):
     model.to(device)
     opt = torch.optim.Adam(model.parameters(), lr=model.config['lr'], weight_decay=model.config['weight_decay'])
     sch = torch.optim.lr_scheduler.ReduceLROnPlateau(opt, factor=model.config['decay_factor'], patience=model.config['patience'], verbose=True)
-    loss_fn = BCEWithLogitsLoss(reduction='sum')
+
     best_val_mae = 1.0
 
     max_epochs = model.config['epochs']
@@ -62,12 +62,13 @@ def train_regression(model, train_iter, val_iter):
 
             opt.zero_grad()
             data = model(data)
+
             loss = model.loss(data)
 
             loss.backward()
             opt.step()
 
-            mae = loss_fn(data.y_pred, data.y)
+            mae = torch.abs(data.y_pred - data.y).sum()
             total_train_mae += mae.cpu().detach().numpy()
             total_train_samples += data.y.shape[0]
             train_loss.append(loss.cpu().detach().numpy())
@@ -92,22 +93,25 @@ def train_regression(model, train_iter, val_iter):
         if sch.state_dict()['_last_lr'][0] < 0.00001 or e > max_epochs:
             break
 
-def preprocess_labels(graph):
-    graph.y = graph.y.to(torch.float32)
+
+def feat_transform(graph):
+    graph.x = torch._cast_Float(F.one_hot(graph.x.view(-1), num_node_feat))
+    graph.edge_attr = torch._cast_Float(F.one_hot(graph.edge_attr.view(-1), num_edge_feat))
     return graph
 
+
 def load_split_data(config):
-    train_data = TUDataset(DATA_PATH, name='MUTAG', transform=preprocess_labels, pre_transform=preproc)
-    val_data = train_data[::18]
+    train_data = ZINC(DATA_PATH, subset=True, split='train', transform=feat_transform, pre_transform=preproc)[::10]
+    val_data = ZINC(DATA_PATH, subset=True, split='val', transform=feat_transform, pre_transform=preproc)[::10]
 
     train_iter = CRaWlLoader(train_data, shuffle=True, batch_size=config['batch_size'])
-    val_iter = CRaWlLoader(val_data, batch_size=1)
+    val_iter = CRaWlLoader(val_data, batch_size=10)
     return train_iter, val_iter
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config", type=str, default='configs/MUTAG/default.json', help="path to config file")
+    parser.add_argument("--config", type=str, default='configs/ZINC/default.json', help="path to config file")
     parser.add_argument("--name", type=str, default='0', help="name of the model")
     parser.add_argument("--gpu", type=int, default=0, help="id of gpu to be used for training")
     parser.add_argument("--seed", type=int, default=0, help="the random seed for torch and numpy")
@@ -121,9 +125,10 @@ if __name__ == '__main__':
     with open(args.config, 'r') as f:
         config = json.load(f)
 
-    model_dir = f'models/MUTAG/{config["name"]}/{args.name}'
+    model_dir = f'models/ZINC/{config["name"]}/{args.name}'
 
     train_iter, val_iter = load_split_data(config)
-    model = CRaWl(model_dir, config, num_node_feat, num_edge_feat, num_classes, BCEWithLogitsLoss())
+
+    model = CRaWl(model_dir, config, num_node_feat, num_edge_feat, num_classes, L1Loss())
     model.save()
     train_regression(model, train_iter, val_iter)
