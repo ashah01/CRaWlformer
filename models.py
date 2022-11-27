@@ -1,6 +1,6 @@
 import os
 import torch
-from torch.nn import Module, Linear, Dropout, BatchNorm1d, ReLU, Sequential, Identity, Conv1d, TransformerEncoderLayer
+from torch.nn import Module, Linear, Dropout, BatchNorm1d, ReLU, Sequential, Identity, Conv1d, TransformerEncoderLayer, TransformerEncoder
 from torch_scatter import scatter_mean, scatter_sum
 from torch_geometric.utils import to_dense_batch
 from torch_geometric.nn.glob.glob import global_add_pool
@@ -150,7 +150,8 @@ class CRaWl(Module):
         self.convs = Sequential(*modules)
         self.dropout_layer = Dropout(self.dropout)
         self.batch_local = BatchNorm1d(self.hidden)
-        self.transformer = TransformerEncoderLayer(self.hidden, nhead=5, dim_feedforward=self.hidden*2, dropout=0.5) # 147 % 7 == 0
+        self.layer = TransformerEncoderLayer(self.hidden, nhead=7, dim_feedforward=self.hidden*2, dropout=0.5) # self.hidden % nhead == 0
+        self.transformer = TransformerEncoder(self.layer, 2)
         self.FC_layers = torch.nn.ModuleList([Linear(self.hidden, self.hidden // 2), Linear(self.hidden // 2, self.hidden // 4), Linear(self.hidden // 4, 1)])
         self.out_activation = ReLU()
 
@@ -195,7 +196,7 @@ class CRaWl(Module):
         h_local = self.batch_local(h_local)
         h_dense, mask = to_dense_batch(h_local, data.batch)
         h_dense = h_dense.transpose(0, 1)
-        h = self.transformer(h_dense, src_mask=None, src_key_padding_mask=~mask).transpose(0, 1)[mask]
+        h = self.transformer(h_dense, mask=None, src_key_padding_mask=~mask).transpose(0, 1)[mask]
         graph_emb = global_add_pool(h, data.batch)
         for l in range(2):
             graph_emb = self.FC_layers[l](graph_emb)
