@@ -150,7 +150,7 @@ class CRaWl(Module):
         self.convs = Sequential(*modules)
         self.dropout_layer = Dropout(self.dropout)
         self.batch_local = BatchNorm1d(self.hidden)
-        self.layer = TransformerEncoderLayer(self.hidden, nhead=7, dim_feedforward=self.hidden*2, dropout=0.5) # self.hidden % nhead == 0
+        self.layer = TransformerEncoderLayer(self.hidden, nhead=7, dim_feedforward=self.hidden*2, dropout=0.1) # self.hidden % nhead == 0
         self.transformer = TransformerEncoder(self.layer, 2)
         self.FC_layers = torch.nn.ModuleList([Linear(self.hidden, self.hidden // 2), Linear(self.hidden // 2, self.hidden // 4), Linear(self.hidden // 4, 1)])
         self.out_activation = ReLU()

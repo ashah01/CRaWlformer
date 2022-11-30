@@ -111,7 +111,7 @@ def load_split_data(config):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config", type=str, default='configs/ZINC/default.json', help="path to config file")
+    parser.add_argument("--config", type=str, default='configs/ZINC/fast.json', help="path to config file")
     parser.add_argument("--name", type=str, default='0', help="name of the model")
     parser.add_argument("--gpu", type=int, default=0, help="id of gpu to be used for training")
     parser.add_argument("--seed", type=int, default=0, help="the random seed for torch and numpy")
