@@ -101,8 +101,8 @@ def feat_transform(graph):
 
 
 def load_split_data(config):
-    train_data = ZINC(DATA_PATH, subset=True, split='train', transform=feat_transform, pre_transform=preproc)[::10]
-    val_data = ZINC(DATA_PATH, subset=True, split='val', transform=feat_transform, pre_transform=preproc)[::10]
+    train_data = ZINC(DATA_PATH, subset=True, split='train', transform=feat_transform, pre_transform=preproc)[::20]
+    val_data = ZINC(DATA_PATH, subset=True, split='val', transform=feat_transform, pre_transform=preproc)[::20]
 
     train_iter = CRaWlLoader(train_data, shuffle=True, batch_size=config['batch_size'])
     val_iter = CRaWlLoader(val_data, batch_size=10)
