@@ -3,7 +3,15 @@ import random
 from networkx.algorithms.centrality import eigenvector_centrality_numpy
 import torch
 
-def centrality_nbrw(G, size, dangling=None):
+def centrality_nbrw(G, size):
+    n = len(G.nodes())
+    walks = np.empty((size, n), dtype=int)
+    walk_edges = np.empty((size-1, n), dtype=int)
+    for col in range(n):
+        column(G, size, col, walks, walk_edges)
+    return walks, walk_edges
+
+def column(G, size, start, walks, walk_edges):
     """Finds sample from network G of the desired size using non-backtracking random walk 
         driven by node centrality. 
     
@@ -18,19 +26,13 @@ def centrality_nbrw(G, size, dangling=None):
     
     if size == 0:
         return []
-    
-    if dangling == 'remove':
-        remove = [node for node,degree in dict(G.degree()).items() if degree == 1]
-        G.remove_nodes_from(remove)
 
     # initialise lists of sampled nodes and values
-    S = np.zeros(size)
-    E = np.zeros(size-1)
-    n = len(G.nodes())
-    y = np.zeros(size)
+    S = np.zeros(size, dtype=int)
+    E = np.zeros(size-1, dtype=int)
 
     # start at random node
-    current = random.choice(list(G.nodes()))
+    current = start
     ns = 1 
     S[0] = current
     centrality = eigenvector_centrality_numpy(G)
@@ -51,10 +53,7 @@ def centrality_nbrw(G, size, dangling=None):
             neighbours = list(G.neighbors(current))
             if len(neighbours) == 1:
                 # make walker backtrack if it reaches dangling node
-                if dangling == 'backtrack':
-                    node = S[ns-2]
-                else: 
-                    raise Exception('The walker got stuck at an absorbing node.')    
+                node = S[ns-2]
             else: 
                 # remove previous node from list of neighbours
                 neighbours.remove(S[ns-2])
@@ -79,4 +78,5 @@ def centrality_nbrw(G, size, dangling=None):
         current = node
         ns += 1
         
-    return torch.from_numpy(S.astype(int)), torch.from_numpy(E.astype(int))
+    walks[:, start] = (S.astype(int))
+    walk_edges[:, start] = (E.astype(int))
