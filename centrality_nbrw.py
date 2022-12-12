@@ -1,6 +1,7 @@
 import numpy as np
 import random
 from networkx.algorithms.centrality import eigenvector_centrality_numpy
+import torch
 
 def centrality_nbrw(G, size, dangling=None):
     """Finds sample from network G of the desired size using non-backtracking random walk 
@@ -22,11 +23,12 @@ def centrality_nbrw(G, size, dangling=None):
         remove = [node for node,degree in dict(G.degree()).items() if degree == 1]
         G.remove_nodes_from(remove)
 
-    # initialise lists of sampled nodes and values 
+    # initialise lists of sampled nodes and values
     S = np.zeros(size)
+    E = np.zeros(size-1)
     n = len(G.nodes())
     y = np.zeros(size)
-    
+
     # start at random node
     current = random.choice(list(G.nodes()))
     ns = 1 
@@ -34,13 +36,17 @@ def centrality_nbrw(G, size, dangling=None):
     centrality = eigenvector_centrality_numpy(G)
     while ns < size:
         
-        if ns == 1: 
-            neighbour_centralities = np.array([centrality[x] for x in list(G.neighbors(current))])
+        if ns == 1:
+            neighbours = list(G.neighbors(current))
+            neighbour_centralities = np.array([centrality[x] for x in neighbours])
             # normalise probability 
             prob = neighbour_centralities / sum(neighbour_centralities)
-            
-            # bias the choice towards the one that has highest nb centrality 
-            node = np.random.choice(list(G.neighbors(current)), p=prob)
+            untraveled_mask = ~np.isin(neighbours, S)
+            if untraveled_mask.any():
+                node = neighbours[np.where(prob==prob[untraveled_mask].max())[0][0]]
+            else:
+                # choose the neighbour with the highest centrality    
+                node = np.random.choice(neighbours)
         else: 
             neighbours = list(G.neighbors(current))
             if len(neighbours) == 1:
@@ -58,13 +64,19 @@ def centrality_nbrw(G, size, dangling=None):
                 prob = neighbour_centralities / sum(neighbour_centralities)
                 untraveled_mask = ~np.isin(neighbours, S)
                 if untraveled_mask.any():
-                    node = neighbours[np.where(prob==prob[~np.isin(neighbours, S)].max())[0][0]]
+                    node = neighbours[np.where(prob==prob[untraveled_mask].max())[0][0]]
                 else:
                     # choose the neighbour with the highest centrality    
                     node = np.random.choice(neighbours)
-                                 
+        
+        i = 0
+        for edge in G.edges:
+            if edge == (current, node):
+                break
+            i += 1
+        E[ns-1] = i
         S[ns] = node
         current = node
         ns += 1
-    
-    return S.astype(int)
+        
+    return torch.from_numpy(S.astype(int)), torch.from_numpy(E.astype(int))
