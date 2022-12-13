@@ -1,82 +1,61 @@
 import numpy as np
-import random
 from networkx.algorithms.centrality import eigenvector_centrality_numpy
-import torch
 
-def centrality_nbrw(G, size):
-    n = len(G.nodes())
-    walks = np.empty((size, n), dtype=int)
-    walk_edges = np.empty((size-1, n), dtype=int)
-    for col in range(n):
-        column(G, size, col, walks, walk_edges)
-    return walks, walk_edges
-
-def column(G, size, start, walks, walk_edges):
-    """Finds sample from network G of the desired size using non-backtracking random walk 
-        driven by node centrality. 
+class RandomWalk:
+    def __init__(self, G, size):
+        self.G = G
+        self.size = size
+        self.centrality = eigenvector_centrality_numpy(G)
+        self.n = len(G.nodes())
+        self.current = np.array(G.nodes())
+        self.walks = np.zeros((size, self.n), dtype=int)
+        self.walk_edges = np.zeros((size-1, self.n), dtype=int)
+        self.walks[0] = self.current
     
-    Args: 
-        G: networkX graph
-        size: int desired size of the sample
-        centrality_type: nb_centrality or built-in eigenvector_centrality_numpy
-        dangling: str instruction on how to handle dangling nodes; 'backtrack' or 'remove'
-    Returns: 
-        S: list nodes in the sample
-    """
-    
-    if size == 0:
-        return []
+    def walk(self):
+        for step in range(self.size - 1):
+            self.row(step + 1)
 
-    # initialise lists of sampled nodes and values
-    S = np.zeros(size, dtype=int)
-    E = np.zeros(size-1, dtype=int)
+        return self.walks, self.walk_edges
 
-    # start at random node
-    current = start
-    ns = 1 
-    S[0] = current
-    centrality = eigenvector_centrality_numpy(G)
-    while ns < size:
-        
-        if ns == 1:
-            neighbours = list(G.neighbors(current))
-            neighbour_centralities = np.array([centrality[x] for x in neighbours])
+    def row(self, steps):
+        neighbours = [list(self.G.neighbors(node)) for node in self.current]
+        node = np.zeros_like(self.G.nodes())
+        edges = np.zeros_like(self.G.nodes())
+        if steps == 1:
+            
+            neighbour_centralities = [np.array([self.centrality[j] for j in x]) for x in neighbours]
             # normalise probability 
-            prob = neighbour_centralities / sum(neighbour_centralities)
-            untraveled_mask = ~np.isin(neighbours, S)
-            if untraveled_mask.any():
-                node = neighbours[np.where(prob==prob[untraveled_mask].max())[0][0]]
-            else:
-                # choose the neighbour with the highest centrality    
-                node = np.random.choice(neighbours)
-        else: 
-            neighbours = list(G.neighbors(current))
-            if len(neighbours) == 1:
-                # make walker backtrack if it reaches dangling node
-                node = S[ns-2]
-            else: 
-                # remove previous node from list of neighbours
-                neighbours.remove(S[ns-2])
-                
-                # compute degree centrality for neighbouring nodes
-                neighbour_centralities = np.array([centrality[x] for x in neighbours])
-                prob = neighbour_centralities / sum(neighbour_centralities)
-                untraveled_mask = ~np.isin(neighbours, S)
-                if untraveled_mask.any():
-                    node = neighbours[np.where(prob==prob[untraveled_mask].max())[0][0]]
+            prob = [neighbourhood / sum(neighbourhood) for neighbourhood in neighbour_centralities]
+            untraveled_mask = [~np.isin(neighbours[index], self.walks[:, index]) for index in range(self.n)]
+            for i, mask in enumerate(untraveled_mask):
+                if mask.any():
+                    node[i] = neighbours[i][np.where(prob[i] == prob[i][mask].max())[0][0]]
                 else:
-                    # choose the neighbour with the highest centrality    
-                    node = np.random.choice(neighbours)
+                    node[i] = np.random.choice(neighbours[i])
+        else:
+            for i, neighbourhood in enumerate(neighbours):
+                if len(neighbourhood) == 1:
+                    node[i] = self.walks[:, i][steps-2]
+                else: 
+                    # remove previous node from list of neighbours
+                    neighbourhood.remove(self.walks[:, i][steps-2])
+                    
+                    # compute degree centrality for neighbouring nodes
+                    neighbour_centralities = np.array([self.centrality[x] for x in neighbourhood])
+                    prob = neighbour_centralities / sum(neighbour_centralities)
+                    untraveled_mask = ~np.isin(neighbourhood, self.walks[:, i])
+                    if untraveled_mask.any():
+                        node[i] = neighbourhood[np.where(prob==prob[untraveled_mask].max())[0][0]]
+                    else:
+                        # choose the neighbour with the highest centrality    
+                        node[i] = np.random.choice(neighbourhood)
         
-        i = 0
-        for edge in G.edges:
-            if edge == (current, node):
-                break
-            i += 1
-        E[ns-1] = i
-        S[ns] = node
-        current = node
-        ns += 1
-        
-    walks[:, start] = (S.astype(int))
-    walk_edges[:, start] = (E.astype(int))
+        self.walks[steps] = node
+        for index, edge in enumerate(self.G.edges):
+            for i in range(self.n):
+                if edge == (self.current[i], node[i]):
+                    edges[i] = index
+            
+        self.walk_edges[steps-1] = edges
+        self.current = node
