@@ -1,0 +1,121 @@
+`bottleneck` is a tool that can be used as an initial step for debugging
+bottlenecks in your program.
+
+It summarizes runs of your script with the Python profiler and PyTorch's
+autograd profiler. Because your script will be profiled, please ensure that it
+exits in a finite amount of time.
+
+For more complicated uses of the profilers, please see
+https://docs.python.org/3/library/profile.html and
+https://pytorch.org/docs/master/autograd.html#profiler for more information.
+Running environment analysis...
+Running your script with cProfile
+Using device: cuda:0
+Number of paramters: 432961
+1.0795798
+Running your script with the autograd profiler...
+Using device: cuda:0
+Number of paramters: 432961
+1.1005574
+Using device: cuda:0
+Number of paramters: 432961
+1.1245354
+--------------------------------------------------------------------------------
+  Environment Summary
+--------------------------------------------------------------------------------
+PyTorch 1.7.1+cu110 DEBUG compiled w/ CUDA 11.0
+Running with Python 3.8 and 
+
+`pip3 list` truncated output:
+numpy==1.19.5
+torch==1.7.1+cu110
+torch-cluster==1.5.8
+torch-geometric==1.6.3
+torch-scatter==2.0.5
+torch-sparse==0.6.8
+torch-spline-conv==1.2.0
+torchaudio==0.7.2
+torchvision==0.8.2+cu110
+--------------------------------------------------------------------------------
+  cProfile output
+--------------------------------------------------------------------------------
+         8806399 function calls (8692206 primitive calls) in 33.922 seconds
+
+   Ordered by: internal time
+   List reduced from 14889 to 15 due to restriction <15>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+      149    3.808    0.026    3.808    0.026 {method 'run_backward' of 'torch._C._EngineBase' objects}
+     1979    3.469    0.002    3.469    0.002 {method 'to' of 'torch._C._TensorBase' objects}
+     2980    1.757    0.001    1.930    0.001 /home/paperspace/Code/CRaWlformer/walker.py:55(unweighted_choice)
+      149    0.995    0.007    3.676    0.025 /home/paperspace/Code/CRaWlformer/walker.py:82(sample_walks)
+     4800    0.930    0.000    1.967    0.000 /home/paperspace/.local/lib/python3.8/site-packages/torch_geometric/data/in_memory_dataset.py:69(get)
+      149    0.794    0.005    3.209    0.022 /home/paperspace/.local/lib/python3.8/site-packages/torch/optim/functional.py:53(adam)
+    48872    0.721    0.000    0.721    0.000 {method 'mul_' of 'torch._C._TensorBase' objects}
+   170724    0.716    0.000    1.790    0.000 /home/paperspace/.local/lib/python3.8/site-packages/torch/tensor.py:933(grad)
+    32054    0.663    0.000    1.225    0.000 /usr/lib/python3.8/inspect.py:625(cleandoc)
+    48872    0.631    0.000    0.631    0.000 {method 'add_' of 'torch._C._TensorBase' objects}
+     3859    0.544    0.000    0.544    0.000 {built-in method marshal.loads}
+    24436    0.383    0.000    0.383    0.000 {method 'sqrt' of 'torch._C._TensorBase' objects}
+    24436    0.378    0.000    0.378    0.000 {method 'addcdiv_' of 'torch._C._TensorBase' objects}
+   212102    0.372    0.000    1.297    0.000 /home/paperspace/.local/lib/python3.8/site-packages/torch/overrides.py:1070(has_torch_function)
+   450428    0.365    0.000    0.476    0.000 /home/paperspace/.local/lib/python3.8/site-packages/torch/overrides.py:1083(<genexpr>)
+
+
+--------------------------------------------------------------------------------
+  autograd profiler output (CPU mode)
+--------------------------------------------------------------------------------
+        top 15 events sorted by cpu_time_total
+
+-----------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+                               Name    Self CPU %      Self CPU   CPU total %     CPU total  CPU time avg     Self CUDA   Self CUDA %    CUDA total  CUDA time avg    # of Calls  
+-----------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+                        aten::zero_        24.76%     305.194ms        24.76%     305.194ms     305.194ms       0.000us           NaN       0.000us       0.000us             1  
+    torch::autograd::AccumulateGrad        13.01%     160.332ms        13.01%     160.332ms     160.332ms       0.000us           NaN       0.000us       0.000us             1  
+                        aten::index        12.41%     152.916ms        12.41%     152.916ms     152.916ms       0.000us           NaN       0.000us       0.000us             1  
+                      aten::nonzero        12.39%     152.758ms        12.39%     152.758ms     152.758ms       0.000us           NaN       0.000us       0.000us             1  
+                            aten::t        12.39%     152.658ms        12.39%     152.658ms     152.658ms       0.000us           NaN       0.000us       0.000us             1  
+                         MmBackward         6.35%      78.223ms         6.35%      78.223ms      78.223ms       0.000us           NaN       0.000us       0.000us             1  
+                      aten::one_hot         3.12%      38.507ms         3.12%      38.507ms      38.507ms       0.000us           NaN       0.000us       0.000us             1  
+                          aten::min         3.11%      38.336ms         3.11%      38.336ms      38.336ms       0.000us           NaN       0.000us       0.000us             1  
+                        aten::empty         3.11%      38.284ms         3.11%      38.284ms      38.284ms       0.000us           NaN       0.000us       0.000us             1  
+                       BmmBackward0         3.07%      37.836ms         3.07%      37.836ms      37.836ms       0.000us           NaN       0.000us       0.000us             1  
+                          aten::bmm         3.07%      37.780ms         3.07%      37.780ms      37.780ms       0.000us           NaN       0.000us       0.000us             1  
+                       ViewBackward         1.59%      19.620ms         1.59%      19.620ms      19.620ms       0.000us           NaN       0.000us       0.000us             1  
+                       BmmBackward0         0.83%      10.178ms         0.83%      10.178ms      10.178ms       0.000us           NaN       0.000us       0.000us             1  
+    torch::autograd::AccumulateGrad         0.41%       5.110ms         0.41%       5.110ms       5.110ms       0.000us           NaN       0.000us       0.000us             1  
+                        aten::index         0.39%       4.841ms         0.39%       4.841ms       4.841ms       0.000us           NaN       0.000us       0.000us             1  
+-----------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+Self CPU time total: 1.233s
+CUDA time total: 0.000us
+
+--------------------------------------------------------------------------------
+  autograd profiler output (CUDA mode)
+--------------------------------------------------------------------------------
+        top 15 events sorted by cpu_time_total
+
+        Because the autograd profiler uses the CUDA event API,
+        the CUDA time column reports approximately max(cuda_time, cpu_time).
+        Please ignore this output if your code does not use CUDA.
+
+-----------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+                               Name    Self CPU %      Self CPU   CPU total %     CPU total  CPU time avg     Self CUDA   Self CUDA %    CUDA total  CUDA time avg    # of Calls  
+-----------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+                         aten::sqrt        43.73%     597.984ms        43.73%     597.984ms     597.984ms     598.004ms        44.39%     598.004ms     598.004ms             1  
+    torch::autograd::AccumulateGrad        12.20%     166.817ms        12.20%     166.817ms     166.817ms     166.804ms        12.38%     166.804ms     166.804ms             1  
+                        aten::zero_        11.35%     155.201ms        11.35%     155.201ms     155.201ms     155.203ms        11.52%     155.203ms     155.203ms             1  
+                         MmBackward         6.43%      87.890ms         6.43%      87.890ms      87.890ms      87.894ms         6.52%      87.894ms      87.894ms             1  
+                        aten::index         5.76%      78.819ms         5.76%      78.819ms      78.819ms      78.820ms         5.85%      78.820ms      78.820ms             1  
+                       BmmBackward0         3.08%      42.181ms         3.08%      42.181ms      42.181ms      42.191ms         3.13%      42.191ms      42.191ms             1  
+                          aten::bmm         3.08%      42.092ms         3.08%      42.092ms      42.092ms      42.060ms         3.12%      42.060ms      42.060ms             1  
+                    aten::new_zeros         2.86%      39.071ms         2.86%      39.071ms      39.071ms      39.038ms         2.90%      39.038ms      39.038ms             1  
+                        aten::zeros         2.86%      39.056ms         2.86%      39.056ms      39.056ms      39.029ms         2.90%      39.029ms      39.029ms             1  
+                        aten::zero_         2.85%      39.037ms         2.85%      39.037ms      39.037ms      39.022ms         2.90%      39.022ms      39.022ms             1  
+                         aten::view         1.49%      20.331ms         1.49%      20.331ms      20.331ms       0.000us         0.00%       0.000us       0.000us             1  
+                     L1LossBackward         1.45%      19.761ms         1.45%      19.761ms      19.761ms      19.748ms         1.47%      19.748ms      19.748ms             1  
+                       ViewBackward         1.43%      19.618ms         1.43%      19.618ms      19.618ms      19.633ms         1.46%      19.633ms      19.633ms             1  
+                        aten::index         0.73%       9.952ms         0.73%       9.952ms       9.952ms       9.953ms         0.74%       9.953ms       9.953ms             1  
+                      aten::reshape         0.71%       9.746ms         0.71%       9.746ms       9.746ms       9.757ms         0.72%       9.757ms       9.757ms             1  
+-----------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+Self CPU time total: 1.368s
+CUDA time total: 1.347s
