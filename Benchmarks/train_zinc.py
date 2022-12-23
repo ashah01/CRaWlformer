@@ -66,6 +66,7 @@ def train_regression(model, train_iter, val_iter):
             loss = model.loss(data)
 
             loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             opt.step()
 
             mae = torch.abs(data.y_pred - data.y).sum()
