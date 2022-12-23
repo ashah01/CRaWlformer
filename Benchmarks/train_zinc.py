@@ -44,7 +44,7 @@ def train_regression(model, train_iter, val_iter):
     writer = SummaryWriter(model.model_dir)
 
     model.to(device)
-    opt = torch.optim.Adam(model.parameters(), lr=model.config['lr'], weight_decay=model.config['weight_decay'])
+    opt = torch.optim.AdamW(model.parameters(), lr=model.config['lr'], weight_decay=model.config['weight_decay'])
     sch = torch.optim.lr_scheduler.ReduceLROnPlateau(opt, factor=model.config['decay_factor'], patience=model.config['patience'], verbose=True)
 
     best_val_mae = 1.0
