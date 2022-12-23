@@ -90,8 +90,6 @@ def train_regression(model, train_iter, val_iter):
         writer.add_scalar('MAE/val', val_mae, e)
 
         sch.step(val_mae)
-        if sch.state_dict()['_last_lr'][0] < 0.00001 or e > max_epochs:
-            break
 
 
 def feat_transform(graph):
