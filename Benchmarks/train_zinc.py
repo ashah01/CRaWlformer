@@ -44,7 +44,7 @@ def train_regression(model, train_iter, val_iter):
     writer = SummaryWriter(model.model_dir)
 
     model.to(device)
-    opt = torch.optim.AdamW(model.parameters(), lr=model.config['lr'], weight_decay=model.config['weight_decay'])
+    opt = torch.optim.Adam(model.parameters(), lr=model.config['lr'], weight_decay=model.config['weight_decay'])
     sch = torch.optim.lr_scheduler.ReduceLROnPlateau(opt, factor=model.config['decay_factor'], patience=model.config['patience'], verbose=True)
 
     best_val_mae = 1.0
@@ -66,7 +66,6 @@ def train_regression(model, train_iter, val_iter):
             loss = model.loss(data)
 
             loss.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             opt.step()
 
             mae = torch.abs(data.y_pred - data.y).sum()
@@ -91,6 +90,8 @@ def train_regression(model, train_iter, val_iter):
         writer.add_scalar('MAE/val', val_mae, e)
 
         sch.step(val_mae)
+        if sch.state_dict()['_last_lr'][0] < 0.00001 or e > max_epochs:
+            break
 
 
 def feat_transform(graph):
@@ -103,8 +104,8 @@ def load_split_data(config):
     train_data = ZINC(DATA_PATH, subset=True, split='train', transform=feat_transform, pre_transform=preproc)
     val_data = ZINC(DATA_PATH, subset=True, split='val', transform=feat_transform, pre_transform=preproc)
 
-    train_iter = CRaWlLoader(train_data, shuffle=True, batch_size=config['batch_size'], num_workers=4)
-    val_iter = CRaWlLoader(val_data, batch_size=100, num_workers=4)
+    train_iter = CRaWlLoader(train_data, shuffle=True, batch_size=config['batch_size'])
+    val_iter = CRaWlLoader(val_data, batch_size=100)
     return train_iter, val_iter
 
 
